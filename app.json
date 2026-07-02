@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Mindoct",
+    "slug": "mindoct-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#051f1d"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png"
+    },
+    "platforms": ["ios", "android", "web"],
+    "assetBundlePatterns": [
+      "**/*",
+      "src/assets/Doctors/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#051f1d"
+      }
+    }
+  }
+}
