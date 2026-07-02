@@ -80,7 +80,9 @@ const curriculumSlice = createSlice({
         specialty: 'CBT & Stress Specialist',
         emoji: '🩺',
         avatar: '👩‍⚕️',
+        gender: 'female',
         languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Neha Roy.jpeg'),
         welcome: 'Hello! I am Dr. Neha Roy, your CBT and Stress Relief specialist. Let us discuss how you are coping today.'
       },
       {
@@ -89,7 +91,9 @@ const curriculumSlice = createSlice({
         specialty: 'Mindfulness & Grounding Specialist',
         emoji: '🧘',
         avatar: '👨‍⚕️',
+        gender: 'male',
         languages: ['en', 'bn'],
+        image: require('../assets/Doctors/Dr. Amit Das.jpeg'),
         welcome: 'Greetings. I am Dr. Amit Das. I specialize in mindfulness and emotional grounding. How can we center your mind today?'
       },
       {
@@ -98,8 +102,87 @@ const curriculumSlice = createSlice({
         specialty: 'Sleep & Circadian Expert',
         emoji: '🌙',
         avatar: '👩‍⚕️',
+        gender: 'female',
         languages: ['en'],
+        image: require('../assets/Doctors/Dr. Sarah Jenkins.jpeg'),
         welcome: 'Hello there. I am Dr. Sarah Jenkins, sleep quality specialist. If you are having trouble sleeping or feeling fatigued, let\'s set a circadian routine together.'
+      },
+      {
+        id: 'dr_rajiv',
+        name: 'Dr. Rajiv',
+        specialty: 'Psychiatry & Mental Wellness',
+        emoji: '🧠',
+        avatar: '👨‍⚕️',
+        gender: 'male',
+        languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Rajiv.jpeg'),
+        welcome: 'Hello! I am Dr. Rajiv, a psychiatrist focused on mental wellness and emotional health. How can I assist you today?'
+      },
+      {
+        id: 'dr_riya',
+        name: 'Dr. Riya Dixit',
+        specialty: 'Anxiety & Panic Disorder Expert',
+        emoji: '💙',
+        avatar: '👩‍⚕️',
+        gender: 'female',
+        languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Riya Dixit.jpeg'),
+        welcome: 'Hi, I am Dr. Riya Dixit. I specialize in anxiety and panic disorders. You are safe here — let us talk about what you are experiencing.'
+      },
+      {
+        id: 'dr_rohit',
+        name: 'Dr. Rohit Sharma',
+        specialty: 'Trauma & PTSD Recovery',
+        emoji: '🛡️',
+        avatar: '👨‍⚕️',
+        gender: 'male',
+        languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Rohit Sharma.jpeg'),
+        welcome: 'Hello, I am Dr. Rohit Sharma. I work with trauma survivors and PTSD recovery. This is a safe space — feel free to share at your pace.'
+      },
+      {
+        id: 'dr_sneha',
+        name: 'Dr. Sneha',
+        specialty: 'Child & Adolescent Psychology',
+        emoji: '🌸',
+        avatar: '👩‍⚕️',
+        gender: 'female',
+        languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Sneha.jpeg'),
+        welcome: 'Hi there! I am Dr. Sneha, a child and adolescent psychologist. I am here to listen and support you through any challenges you face.'
+      },
+      {
+        id: 'dr_sonu',
+        name: 'Dr. Sonu',
+        specialty: 'Addiction & Behavioral Therapy',
+        emoji: '🔄',
+        avatar: '👨‍⚕️',
+        gender: 'male',
+        languages: ['en'],
+        image: require('../assets/Doctors/Dr. Sonu.jpeg'),
+        welcome: 'Hello! I am Dr. Sonu, specializing in behavioral therapy and addiction recovery. Every step forward counts — how are you doing today?'
+      },
+      {
+        id: 'dr_sourav',
+        name: 'Dr. Sourav',
+        specialty: 'Couples & Relationship Counseling',
+        emoji: '💞',
+        avatar: '👨‍⚕️',
+        gender: 'male',
+        languages: ['en', 'bn'],
+        image: require('../assets/Doctors/Dr. Sourav.jpeg'),
+        welcome: 'Hello! I am Dr. Sourav, a relationship and couples counselor. Communication and empathy are the keys — let us explore that together.'
+      },
+      {
+        id: 'dr_vishal',
+        name: 'Dr. Vishal',
+        specialty: 'Depression & Mood Disorders',
+        emoji: '☀️',
+        avatar: '👨‍⚕️',
+        gender: 'male',
+        languages: ['en', 'hi'],
+        image: require('../assets/Doctors/Dr. Vishal.jpeg'),
+        welcome: 'Hi, I am Dr. Vishal. I specialize in depression and mood disorders. You took a brave step by being here — I am ready to listen.'
       }
     ],
     subjects: {

@@ -3,6 +3,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
   TouchableOpacity,
   SafeAreaView,
   TextInput,
@@ -618,128 +619,41 @@ export default function ConsultationScreen({ route, navigation }) {
         {(mode === 'live' || consultationMode === 'video') && (
           <View style={[styles.doctorViewport, { backgroundColor: '#0c2e2a', borderColor: colors.border }]}>
             
-            {/* Realistic AI Doctor face with lip-sync */}
-            <View style={styles.avatarPulsingContainer}>
-              {aiStatus === 'speaking' && (
-                <>
-                  <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim2 }], opacity: 0.12 }]} />
-                  <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim1 }], opacity: 0.25 }]} />
-                </>
-              )}
-
-              {/* Doctor face container with breathing scale */}
-              <Animated.View style={[styles.doctorFaceWrapper, { transform: [{ scale: breatheAnim }] }]}>
-                
-                {/* Neck */}
-                <View style={styles.doctorNeck} />
-
-                {/* Lab coat / body (visible above frame) */}
-                <View style={styles.doctorBody}>
-                  <View style={styles.labCoatLeft} />
-                  <View style={styles.labCoatRight} />
-                  <View style={styles.labCoatCenter} />
-                  {/* Stethoscope hint */}
-                  <View style={styles.stethoscope} />
+            {/* Real Doctor Photo - full viewport with breathing animation */}
+            <Animated.View style={[styles.doctorPhotoWrapper, { transform: [{ scale: breatheAnim }] }]}>
+              {doctor.image ? (
+                <Image
+                  source={doctor.image}
+                  style={styles.doctorPhoto}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.doctorPhotoFallback, { backgroundColor: '#1a4a45' }]}>
+                  <Text style={styles.avatarEmoji}>{mode === 'live' ? '👨‍⚕️' : doctor.avatar}</Text>
                 </View>
-
-                {/* Face base */}
-                <View style={[styles.doctorFace, { backgroundColor: doctor.id === 'dr_neha' ? '#c8856a' : doctor.id === 'dr_amit' ? '#a0714a' : '#d4967e' }]}>
-                  
-                  {/* Hair */}
-                  <View style={[styles.doctorHair, { backgroundColor: doctor.id === 'dr_sarah' ? '#5c3d1e' : '#1a1208' }]}>
-                    <View style={styles.hairSideLeft} />
-                    <View style={styles.hairSideRight} />
-                  </View>
-
-                  {/* Forehead highlight */}
-                  <View style={styles.foreheadHighlight} />
-
-                  {/* Eyebrows */}
-                  <View style={styles.eyebrowsRow}>
-                    <Animated.View style={[
-                      styles.eyebrow,
-                      { transform: [{ translateY: eyebrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }
-                    ]} />
-                    <Animated.View style={[
-                      styles.eyebrow,
-                      { transform: [{ translateY: eyebrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }
-                    ]} />
-                  </View>
-
-                  {/* Eyes row */}
-                  <View style={styles.eyesRow}>
-                    {/* Left Eye */}
-                    <View style={styles.eyeSocket}>
-                      <View style={styles.eyeWhite}>
-                        <Animated.View style={[
-                          styles.eyelid,
-                          { height: blinkAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }
-                        ]} />
-                        <View style={styles.eyePupil}>
-                          <View style={styles.eyeHighlight} />
-                        </View>
-                      </View>
-                    </View>
-                    {/* Right Eye */}
-                    <View style={styles.eyeSocket}>
-                      <View style={styles.eyeWhite}>
-                        <Animated.View style={[
-                          styles.eyelid,
-                          { height: blinkAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }
-                        ]} />
-                        <View style={styles.eyePupil}>
-                          <View style={styles.eyeHighlight} />
-                        </View>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Nose */}
-                  <View style={styles.noseContainer}>
-                    <View style={styles.noseBridge} />
-                    <View style={styles.nostrilsRow}>
-                      <View style={styles.nostril} />
-                      <View style={styles.nostril} />
-                    </View>
-                  </View>
-
-                  {/* Mouth with animated jaw / lip-sync */}
-                  <View style={styles.mouthContainer}>
-                    {/* Upper lip */}
-                    <View style={styles.upperLip} />
-                    {/* Mouth opening - animated height */}
-                    <Animated.View style={[
-                      styles.mouthOpening,
-                      {
-                        height: jawAnim.interpolate({ inputRange: [0, 1], outputRange: [2, 14] }),
-                        backgroundColor: '#3a1010'
-                      }
-                    ]} />
-                    {/* Lower lip / jaw */}
-                    <Animated.View style={[
-                      styles.lowerLip,
-                      {
-                        transform: [{
-                          translateY: jawAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] })
-                        }]
-                      }
-                    ]} />
-                  </View>
-
-                  {/* Cheek highlights */}
-                  <View style={styles.cheekLeft} />
-                  <View style={styles.cheekRight} />
-
-                  {/* Chin */}
-                  <View style={styles.chin} />
-                </View>
-              </Animated.View>
-
-              {/* Speaking indicator glow ring */}
-              {aiStatus === 'speaking' && (
-                <View style={styles.speakingGlowRing} />
               )}
-            </View>
+              {/* Dark gradient overlay at bottom for subtitle readability */}
+              <View style={styles.photoGradientOverlay} />
+            </Animated.View>
+
+            {/* Speaking glow border ring */}
+            {aiStatus === 'speaking' && (
+              <Animated.View style={[
+                styles.speakingBorderRing,
+                { opacity: pulseAnim1.interpolate({ inputRange: [1, 1.5], outputRange: [0.5, 1] }) }
+              ]} />
+            )}
+
+            {/* Speaking waveform bars over photo */}
+            {aiStatus === 'speaking' && (
+              <View style={styles.photoWaveformContainer}>
+                <Animated.View style={[styles.photoWaveBar, { transform: [{ scaleY: wave1 }] }]} />
+                <Animated.View style={[styles.photoWaveBar, { transform: [{ scaleY: wave2 }] }]} />
+                <Animated.View style={[styles.photoWaveBar, { transform: [{ scaleY: wave3 }] }]} />
+                <Animated.View style={[styles.photoWaveBar, { transform: [{ scaleY: wave4 }] }]} />
+                <Animated.View style={[styles.photoWaveBar, { transform: [{ scaleY: wave5 }] }]} />
+              </View>
+            )}
 
             {/* LIVE Label */}
             <View style={styles.liveIndicatorContainer}>
@@ -777,55 +691,25 @@ export default function ConsultationScreen({ route, navigation }) {
         {mode !== 'live' && consultationMode === 'voice' && (
           <View style={[styles.voiceViewport, { backgroundColor: '#0c2e2a', borderColor: colors.border }]}>
             <View style={styles.voiceDoctorCard}>
-              {/* Realistic animated face for voice call */}
-              <Animated.View style={[styles.doctorFaceWrapper, { transform: [{ scale: breatheAnim }], marginBottom: 12 }]}>
-                <View style={styles.doctorNeck} />
-                <View style={styles.doctorBody}>
-                  <View style={styles.labCoatLeft} />
-                  <View style={styles.labCoatRight} />
-                  <View style={styles.labCoatCenter} />
-                  <View style={styles.stethoscope} />
-                </View>
-                <View style={[styles.doctorFace, { backgroundColor: doctor.id === 'dr_neha' ? '#c8856a' : doctor.id === 'dr_amit' ? '#a0714a' : '#d4967e' }]}>
-                  <View style={[styles.doctorHair, { backgroundColor: doctor.id === 'dr_sarah' ? '#5c3d1e' : '#1a1208' }]}>
-                    <View style={styles.hairSideLeft} />
-                    <View style={styles.hairSideRight} />
+              {/* Real photo in rounded card */}
+              <Animated.View style={[styles.voicePhotoWrapper, { transform: [{ scale: breatheAnim }] }]}>
+                {doctor.image ? (
+                  <Image
+                    source={doctor.image}
+                    style={styles.voicePhoto}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.voicePhotoFallback}>
+                    <Text style={{ fontSize: 64 }}>{doctor.avatar}</Text>
                   </View>
-                  <View style={styles.foreheadHighlight} />
-                  <View style={styles.eyebrowsRow}>
-                    <Animated.View style={[styles.eyebrow, { transform: [{ translateY: eyebrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]} />
-                    <Animated.View style={[styles.eyebrow, { transform: [{ translateY: eyebrowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) }] }]} />
-                  </View>
-                  <View style={styles.eyesRow}>
-                    <View style={styles.eyeSocket}>
-                      <View style={styles.eyeWhite}>
-                        <Animated.View style={[styles.eyelid, { height: blinkAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }]} />
-                        <View style={styles.eyePupil}><View style={styles.eyeHighlight} /></View>
-                      </View>
-                    </View>
-                    <View style={styles.eyeSocket}>
-                      <View style={styles.eyeWhite}>
-                        <Animated.View style={[styles.eyelid, { height: blinkAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }]} />
-                        <View style={styles.eyePupil}><View style={styles.eyeHighlight} /></View>
-                      </View>
-                    </View>
-                  </View>
-                  <View style={styles.noseContainer}>
-                    <View style={styles.noseBridge} />
-                    <View style={styles.nostrilsRow}>
-                      <View style={styles.nostril} />
-                      <View style={styles.nostril} />
-                    </View>
-                  </View>
-                  <View style={styles.mouthContainer}>
-                    <View style={styles.upperLip} />
-                    <Animated.View style={[styles.mouthOpening, { height: jawAnim.interpolate({ inputRange: [0, 1], outputRange: [2, 14] }), backgroundColor: '#3a1010' }]} />
-                    <Animated.View style={[styles.lowerLip, { transform: [{ translateY: jawAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 6] }) }] }]} />
-                  </View>
-                  <View style={styles.cheekLeft} />
-                  <View style={styles.cheekRight} />
-                  <View style={styles.chin} />
-                </View>
+                )}
+                {aiStatus === 'speaking' && (
+                  <Animated.View style={[
+                    styles.voicePhotoGlow,
+                    { opacity: pulseAnim1.interpolate({ inputRange: [1, 1.5], outputRange: [0.4, 1] }) }
+                  ]} />
+                )}
               </Animated.View>
               <Text style={styles.voiceDoctorName}>{doctor.name}</Text>
               <Text style={styles.voiceSpecialty}>{doctor.specialty}</Text>
@@ -1159,8 +1043,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
     position: 'relative'
   },
   voiceViewport: {
@@ -1173,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   voiceDoctorCard: {
     alignItems: 'center',
-    marginBottom: 40
+    marginBottom: 20
   },
   voiceAvatar: {
     fontSize: 72,
@@ -1182,12 +1065,96 @@ const styles = StyleSheet.create({
   voiceDoctorName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#fff'
+    color: '#fff',
+    marginTop: 14
   },
   voiceSpecialty: {
     fontSize: 12,
     color: 'rgba(255,255,255,0.6)',
     marginTop: 2
+  },
+  /* ---- Real Photo styles (Video Call) ---- */
+  doctorPhotoWrapper: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0
+  },
+  doctorPhoto: {
+    width: '100%',
+    height: '100%'
+  },
+  doctorPhotoFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  photoGradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 160,
+    backgroundColor: 'transparent',
+    /* Simulated gradient using opacity layers */
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    background: 'linear-gradient(transparent, rgba(0,0,0,0.85))'
+  },
+  speakingBorderRing: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 12,
+    borderWidth: 3,
+    borderColor: '#38bdf8'
+  },
+  photoWaveformContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 20
+  },
+  photoWaveBar: {
+    width: 4,
+    height: 14,
+    borderRadius: 2,
+    backgroundColor: '#38bdf8'
+  },
+  /* ---- Real Photo styles (Voice Call) ---- */
+  voicePhotoWrapper: {
+    width: 180,
+    height: 220,
+    borderRadius: 90,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#38bdf8',
+    elevation: 8,
+    shadowColor: '#38bdf8',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    position: 'relative'
+  },
+  voicePhoto: {
+    width: '100%',
+    height: '100%'
+  },
+  voicePhotoFallback: {
+    flex: 1,
+    backgroundColor: '#1a4a45',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  voicePhotoGlow: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 90,
+    borderWidth: 4,
+    borderColor: '#38bdf8'
   },
   waveformContainer: {
     flexDirection: 'row',
