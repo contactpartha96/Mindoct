@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,7 @@ import {
   Dimensions,
   ScrollView
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { useSelector } from 'react-redux';
 import { useTheme } from '../theme';
 
@@ -91,16 +92,25 @@ export default function ConsultationScreen({ route, navigation }) {
   const activeDoctorId = doctorId || selectedDoctorId || 'dr_neha';
   const doctor = doctors.find(d => d.id === activeDoctorId) || doctors[0];
 
-  // Consultation Mode: 'video', 'voice', or 'chat'
   const [consultationMode, setConsultationMode] = useState('video');
-  const [language, setLanguage] = useState('en'); // 'en', 'hi', 'bn'
+  const [language, setLanguage] = useState('en');
   const [isMuted, setIsMuted] = useState(false);
   const [isCamOff, setIsCamOff] = useState(false);
-  const [showChatOverlay, setShowChatOverlay] = useState(false); // Quick Overlay in Video/Voice mode
-  const [aiStatus, setAiStatus] = useState('speaking'); // 'speaking' or 'listening'
+  const [showChatOverlay, setShowChatOverlay] = useState(false);
+  const [aiStatus, setAiStatus] = useState('idle'); // 'speaking' | 'listening' | 'thinking' | 'idle'
   const [doctorSpeech, setDoctorSpeech] = useState('');
   const [chatText, setChatText] = useState('');
   const [chatLog, setChatLog] = useState([]);
+
+  // Live word-by-word subtitle state
+  const [liveWords, setLiveWords] = useState([]);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
+  const wordTimerRef = useRef(null);
+
+  // User speaking state (mic held)
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [userInputText, setUserInputText] = useState('');
+  const micHoldTimer = useRef(null);
   
   // Custom Modals visibility
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -183,17 +193,96 @@ export default function ConsultationScreen({ route, navigation }) {
   const dynamicWelcome = getDoctorWelcome(activeDoctorId, language);
   const dynamicChips = getDoctorResponses(activeDoctorId, language);
 
-  // Set initial welcome text & configure languages based on doctor profile
+  // ─── Core TTS function: speaks text, animates word-by-word subtitles ───
+  const speakDoctorText = useCallback((text) => {
+    // Stop any previous speech immediately
+    Speech.stop();
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+
+    if (!text) return;
+
+    const words = text.split(' ');
+    setLiveWords(words);
+    setCurrentWordIndex(0);
+    setDoctorSpeech(text);
+    setAiStatus('speaking');
+
+    // Word highlighting: ~280ms per word average speaking pace
+    let idx = 0;
+    wordTimerRef.current = setInterval(() => {
+      idx++;
+      if (idx < words.length) {
+        setCurrentWordIndex(idx);
+      } else {
+        clearInterval(wordTimerRef.current);
+      }
+    }, 280);
+
+    // Language voice mapping
+    const langVoiceMap = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' };
+    const voiceLang = langVoiceMap[language] || 'en-IN';
+
+    Speech.speak(text, {
+      language: voiceLang,
+      pitch: doctor.gender === 'female' ? 1.2 : 0.95,
+      rate: 0.88,
+      onDone: () => {
+        clearInterval(wordTimerRef.current);
+        setAiStatus('listening');
+        setCurrentWordIndex(-1);
+      },
+      onError: () => {
+        clearInterval(wordTimerRef.current);
+        setAiStatus('listening');
+        setCurrentWordIndex(-1);
+      }
+    });
+  }, [language, doctor.gender]);
+
+  // Mic press handlers (simulates user speaking)
+  const handleMicPressIn = () => {
+    Speech.stop();
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+    setIsUserSpeaking(true);
+    setAiStatus('listening');
+    setCurrentWordIndex(-1);
+    setLiveWords([]);
+  };
+
+  const handleMicPressOut = () => {
+    setIsUserSpeaking(false);
+    // After user finishes speaking, show thinking then reply
+    setAiStatus('thinking');
+    const chips = getDoctorResponses(activeDoctorId, language);
+    const randomChip = chips[Math.floor(Math.random() * chips.length)];
+    const reply = randomChip?.reply || 'Thank you for sharing. I am here to help you through this.';
+    const userText = randomChip?.text || 'I have something on my mind...';
+    const userMsg = { id: Date.now().toString(), sender: 'user', text: userText };
+    setChatLog(prev => [...prev, userMsg]);
+    setTimeout(() => {
+      const docMsg = { id: (Date.now() + 1).toString(), sender: 'doctor', text: reply };
+      setChatLog(prev => [...prev, docMsg]);
+      speakDoctorText(reply);
+    }, 1200);
+  };
+
+  // Cleanup on unmount
   useEffect(() => {
-    // If current language is not supported by doctor, fallback to first supported
+    return () => {
+      Speech.stop();
+      if (wordTimerRef.current) clearInterval(wordTimerRef.current);
+    };
+  }, []);
+
+  // Set initial welcome text & speak on load
+  useEffect(() => {
     if (!doctor.languages.includes(language)) {
       setLanguage(doctor.languages[0]);
     }
-    
-    setDoctorSpeech(dynamicWelcome);
-    setChatLog([
-      { id: '1', sender: 'doctor', text: dynamicWelcome }
-    ]);
+    setChatLog([{ id: '1', sender: 'doctor', text: dynamicWelcome }]);
+    // Short delay so screen renders before TTS starts
+    const t = setTimeout(() => speakDoctorText(dynamicWelcome), 800);
+    return () => clearTimeout(t);
   }, [activeDoctorId, language]);
 
   // Pulse animation loops for video stream avatar
@@ -423,19 +512,20 @@ export default function ConsultationScreen({ route, navigation }) {
     }
   }, [chatLog]);
 
-  // Reply generator trigger
+  // Reply generator trigger (quick-reply chips)
   const handleUserReply = (text, reply) => {
-    // Add user message
+    Speech.stop();
+    if (wordTimerRef.current) clearInterval(wordTimerRef.current);
     const userMsg = { id: Date.now().toString(), sender: 'user', text };
     setChatLog(prev => [...prev, userMsg]);
-    
-    setAiStatus('listening');
-    
+    setAiStatus('thinking');
+    setCurrentWordIndex(-1);
+    setLiveWords([]);
     setTimeout(() => {
-      setAiStatus('speaking');
-      setDoctorSpeech(reply);
-      setChatLog(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'doctor', text: reply }]);
-    }, 1500);
+      const docMsg = { id: (Date.now() + 1).toString(), sender: 'doctor', text: reply };
+      setChatLog(prev => [...prev, docMsg]);
+      speakDoctorText(reply);
+    }, 1000);
   };
 
   // Chat TextInput send
@@ -508,10 +598,16 @@ export default function ConsultationScreen({ route, navigation }) {
         }
       }
 
-      setAiStatus('speaking');
-      setDoctorSpeech(docReply);
-      setChatLog(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'doctor', text: docReply }]);
-    }, 1500);
+      setAiStatus('thinking');
+      setCurrentWordIndex(-1);
+      setLiveWords([]);
+
+      setTimeout(() => {
+        const docMsg = { id: (Date.now() + 1).toString(), sender: 'doctor', text: docReply };
+        setChatLog(prev => [...prev, docMsg]);
+        speakDoctorText(docReply);
+      }, 1200);
+    }, 1000);
   };
 
   const renderChatItem = ({ item }) => {
@@ -668,13 +764,44 @@ export default function ConsultationScreen({ route, navigation }) {
               {mode === 'live' ? (doctorName || 'Dr. Expert') : doctor.name}
             </Text>
 
-            {/* Subtitles speech overlay */}
+            {/* Subtitles speech overlay - Live word-by-word */}
             {mode !== 'live' && (
               <View style={styles.subtitleOverlay}>
-                <Text style={styles.speechStatusLabel}>
-                  {aiStatus === 'speaking' ? strings.speaking : strings.listening}
-                </Text>
-                <Text style={styles.subtitleText}>{doctorSpeech}</Text>
+                {/* Status row */}
+                <View style={styles.statusRow}>
+                  <View style={[styles.statusDot, {
+                    backgroundColor: aiStatus === 'speaking' ? '#38bdf8'
+                      : aiStatus === 'thinking' ? '#f59e0b'
+                      : aiStatus === 'listening' ? '#22c55e'
+                      : '#6b7280'
+                  }]} />
+                  <Text style={styles.speechStatusLabel}>
+                    {aiStatus === 'speaking' ? strings.speaking
+                      : aiStatus === 'thinking' ? '💭 AI is thinking...'
+                      : isUserSpeaking ? '🎙️ Listening to you...'
+                      : strings.listening}
+                  </Text>
+                </View>
+                {/* Word-by-word live subtitle */}
+                {liveWords.length > 0 && aiStatus === 'speaking' ? (
+                  <View style={styles.liveSubtitleRow}>
+                    {liveWords.map((word, idx) => (
+                      <Text
+                        key={idx}
+                        style={[
+                          styles.liveWord,
+                          idx <= currentWordIndex && styles.liveWordHighlighted
+                        ]}
+                      >
+                        {word}{' '}
+                      </Text>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.subtitleText}>
+                    {aiStatus === 'thinking' ? '...' : doctorSpeech}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -724,11 +851,34 @@ export default function ConsultationScreen({ route, navigation }) {
               <Animated.View style={[styles.waveBar, { height: 16, transform: [{ scaleY: wave5 }] }]} />
             </View>
 
+            {/* Live subtitle for voice call */}
             <View style={styles.subtitleOverlay}>
-              <Text style={styles.speechStatusLabel}>
-                {aiStatus === 'speaking' ? strings.speaking : strings.listening}
-              </Text>
-              <Text style={styles.subtitleText}>{doctorSpeech}</Text>
+              <View style={styles.statusRow}>
+                <View style={[styles.statusDot, {
+                  backgroundColor: aiStatus === 'speaking' ? '#38bdf8'
+                    : aiStatus === 'thinking' ? '#f59e0b'
+                    : '#22c55e'
+                }]} />
+                <Text style={styles.speechStatusLabel}>
+                  {aiStatus === 'speaking' ? strings.speaking
+                    : aiStatus === 'thinking' ? '💭 Thinking...'
+                    : isUserSpeaking ? '🎙️ Listening...' : strings.listening}
+                </Text>
+              </View>
+              {liveWords.length > 0 && aiStatus === 'speaking' ? (
+                <View style={styles.liveSubtitleRow}>
+                  {liveWords.map((word, idx) => (
+                    <Text key={idx} style={[
+                      styles.liveWord,
+                      idx <= currentWordIndex && styles.liveWordHighlighted
+                    ]}>{word}{' '}</Text>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.subtitleText}>
+                  {aiStatus === 'thinking' ? '...' : doctorSpeech}
+                </Text>
+              )}
             </View>
           </View>
         )}
@@ -864,13 +1014,31 @@ export default function ConsultationScreen({ route, navigation }) {
       {/* Quick response chip panel (AI modes: video & voice only) */}
       {mode !== 'live' && consultationMode !== 'chat' && (
         <View style={styles.responsesContainer}>
+          {/* MIC HOLD BUTTON - Hold to speak to the doctor */}
+          {(consultationMode === 'video' || consultationMode === 'voice') && (
+            <TouchableOpacity
+              style={[
+                styles.micHoldBtn,
+                isUserSpeaking && styles.micHoldBtnActive
+              ]}
+              onPressIn={handleMicPressIn}
+              onPressOut={handleMicPressOut}
+              activeOpacity={0.8}
+              disabled={aiStatus === 'speaking' || aiStatus === 'thinking'}
+            >
+              <Text style={styles.micHoldIcon}>{isUserSpeaking ? '🔴' : '🎙️'}</Text>
+              <Text style={styles.micHoldLabel}>
+                {isUserSpeaking ? 'Release to send' : 'Hold to speak'}
+              </Text>
+            </TouchableOpacity>
+          )}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
             {dynamicChips.map((item, index) => (
               <TouchableOpacity
                 key={index}
                 style={[styles.responseChip, { borderColor: colors.border }]}
                 onPress={() => handleUserReply(item.text, item.reply)}
-                disabled={aiStatus !== 'speaking'}
+                disabled={aiStatus === 'speaking' || aiStatus === 'thinking' || isUserSpeaking}
               >
                 <Text style={styles.chipText}>{item.text}</Text>
               </TouchableOpacity>
@@ -1716,6 +1884,62 @@ const styles = StyleSheet.create({
   },
   endCallBtn: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)'
+  },
+
+  // ── Mic hold button ──────────────────────────────────────────
+  micHoldBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 30,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderWidth: 1.5,
+    borderColor: '#38bdf8',
+    gap: 8
+  },
+  micHoldBtnActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: '#ef4444'
+  },
+  micHoldIcon: {
+    fontSize: 20
+  },
+  micHoldLabel: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+
+  // ── Live word-by-word subtitle ───────────────────────────────
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+    gap: 6
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4
+  },
+  liveSubtitleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2
+  },
+  liveWord: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20
+  },
+  liveWordHighlighted: {
+    color: '#ffffff',
+    fontWeight: '800'
   },
 
   // Live webinar room styles
