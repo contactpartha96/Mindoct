@@ -13,15 +13,15 @@ import {
   Dimensions,
   ScrollView
 } from 'react-native';
-import * as Speech from 'expo-speech';
+import * as ExpoSpeech from 'expo-speech';
 
 // Cross-platform Speech wrapper
-// On web: uses browser's native Web Speech API (no dependencies needed)
-// On native: delegates to expo-speech
+// On web: uses browser's native Web Speech API (window.speechSynthesis)
+// On native (iOS/Android): delegates to expo-speech
 const SpeechAPI = {
   speak: (text, options = {}) => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      // Web Speech API
+      // Web: use native browser TTS - zero native dependencies
       window.speechSynthesis.cancel();
       const utterance = new window.SpeechSynthesisUtterance(text);
       utterance.lang = options.language || 'en-IN';
@@ -32,14 +32,14 @@ const SpeechAPI = {
       window.speechSynthesis.speak(utterance);
     } else {
       // Native: expo-speech
-      SpeechAPI.speak(text, options);
+      ExpoSpeech.speak(text, options);
     }
   },
   stop: () => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     } else {
-      SpeechAPI.stop();
+      ExpoSpeech.stop();
     }
   }
 };
