@@ -14,6 +14,35 @@ import {
   ScrollView
 } from 'react-native';
 import * as Speech from 'expo-speech';
+
+// Cross-platform Speech wrapper
+// On web: uses browser's native Web Speech API (no dependencies needed)
+// On native: delegates to expo-speech
+const SpeechAPI = {
+  speak: (text, options = {}) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      // Web Speech API
+      window.speechSynthesis.cancel();
+      const utterance = new window.SpeechSynthesisUtterance(text);
+      utterance.lang = options.language || 'en-IN';
+      utterance.pitch = options.pitch || 1.0;
+      utterance.rate = options.rate || 0.88;
+      utterance.onend = options.onDone || null;
+      utterance.onerror = options.onError || null;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      // Native: expo-speech
+      SpeechAPI.speak(text, options);
+    }
+  },
+  stop: () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    } else {
+      SpeechAPI.stop();
+    }
+  }
+};
 import { useSelector } from 'react-redux';
 import { useTheme } from '../theme';
 
@@ -196,7 +225,7 @@ export default function ConsultationScreen({ route, navigation }) {
   // ─── Core TTS function: speaks text, animates word-by-word subtitles ───
   const speakDoctorText = useCallback((text) => {
     // Stop any previous speech immediately
-    Speech.stop();
+    SpeechAPI.stop();
     if (wordTimerRef.current) clearInterval(wordTimerRef.current);
 
     if (!text) return;
@@ -222,7 +251,7 @@ export default function ConsultationScreen({ route, navigation }) {
     const langVoiceMap = { en: 'en-IN', hi: 'hi-IN', bn: 'bn-IN' };
     const voiceLang = langVoiceMap[language] || 'en-IN';
 
-    Speech.speak(text, {
+    SpeechAPI.speak(text, {
       language: voiceLang,
       pitch: doctor.gender === 'female' ? 1.2 : 0.95,
       rate: 0.88,
@@ -241,7 +270,7 @@ export default function ConsultationScreen({ route, navigation }) {
 
   // Mic press handlers (simulates user speaking)
   const handleMicPressIn = () => {
-    Speech.stop();
+    SpeechAPI.stop();
     if (wordTimerRef.current) clearInterval(wordTimerRef.current);
     setIsUserSpeaking(true);
     setAiStatus('listening');
@@ -269,7 +298,7 @@ export default function ConsultationScreen({ route, navigation }) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      Speech.stop();
+      SpeechAPI.stop();
       if (wordTimerRef.current) clearInterval(wordTimerRef.current);
     };
   }, []);
@@ -514,7 +543,7 @@ export default function ConsultationScreen({ route, navigation }) {
 
   // Reply generator trigger (quick-reply chips)
   const handleUserReply = (text, reply) => {
-    Speech.stop();
+    SpeechAPI.stop();
     if (wordTimerRef.current) clearInterval(wordTimerRef.current);
     const userMsg = { id: Date.now().toString(), sender: 'user', text };
     setChatLog(prev => [...prev, userMsg]);
